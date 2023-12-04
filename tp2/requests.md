@@ -466,25 +466,197 @@ db.notes2.aggregate([
 ```
 
 ### Q7. Affichez le nombre de notes de chaque étudiant
-### Q8. Affichez la distribution des nombres de notes (combien d’étudiants ont x notes)
-11 en ont 7 , 13 en ont 6, 10 en ont 5 etc ....
+
+```javascript
+db.notes2.aggregate([
+	{
+		$project:
+		{
+			_id: 0,
+			nom: 1,
+			moyenne: { $size: "$notes" },
+		}
+	}
+])
+```
+
+### Q8. Affichez la distribution des nombres de notes (combien d’étudiants ont x notes) 11 en ont 7 , 13 en ont 6, 10 en ont 5 etc ....
+
+```javascript
+db.notes2.aggregate([
+	{
+		$project:
+		{
+			_id: 0,
+			nom: 1,
+			nbNotes: { $size: "$notes" }
+		}
+	},
+	{
+		$group:
+		{
+			_id: "$nbNotes",
+			nbEtuPourLaNote: 
+			{
+				$sum: 1
+			} 
+		}
+	}
+])
+```
+
 ### Q9. Affichez les notes minimum de chaque étudiant, avec son nom et son groupe. Vérifiez avec le 18.
-### Q10. Affichez les noms des étudiants qui ont au moint une fois la note minimum de toute la collection. On pourra s’y
-prendre en 4 étapes :
-### Q11. Supprimer le champs valeurs des étudiants qui n’ont pas eu la moyenne de ces valeurs, afin qu’ils passent la 2è
-session.
-2
+
+```javascript
+db.notes2.aggregate([
+	{
+		$project:
+		{
+			_id: 0,
+			nom: 1,
+			noteMin: { $min: "$notes" },
+		}
+	}
+])
+```
+
+### Q10. Affichez les noms des étudiants qui ont au moint une fois la note minimum de toute la collection. On pourra s’y prendre en 4 étapes :
+
+<!-- 
+```javascript
+db.notes2.aggregate([
+	{
+		$project:
+		{
+			_id: 0,
+			nom: 1,
+			noteMin: { $min: "$notes" },
+		}
+	}
+])
+``` -->
+
+### Q11. Supprimer le champs valeurs des étudiants qui n’ont pas eu la moyenne de ces valeurs, afin qu’ils passent la 2è session.
+
 ## Exercice 4 : Jouer avec les structures : Document avec sous-documents
-Dans le fichier notes3.json, comme pour notes2 chaque document correspond à un et un seul étudiant, mais le
-tableau notes contient cette fois un objet par matière et numéro de contrôle.
-Q1. Récupérez le fichier notes3.json sur Moodle et importez-le dans votre base Mongo dans une collection note3
-Q2. Afin de bien appréhender la collection ...
-Q2.1. Affichez le premier document
-Q2.2. Affichez le nombre de documents
-Q3. Calculez la moyenne des notes de bdd
-Q4. Sachant qu’il y a 7 objets contrôle dans l’array notes et que, quand un étudiant a été absent, l’object contrôle n’y
-est pas, affichez les noms des étudiants à qui il manque des notes.
-Q5. Affichez maintenant les noms des étudiants à qui il manque des notes en BDD
-Q6. Affichez maintenant le nom de l’étudiant, la matière et le numéro du contrôle manquant
+
+Dans le fichier notes3.json, comme pour notes2 chaque document correspond à un et un seul étudiant, mais le tableau notes contient cette fois un objet par matière et numéro de contrôle.
+
+### Q1. Récupérez le fichier notes3.json sur Moodle et importez-le dans votre base Mongo dans une collection note3
+
+```shell
+docker exec -i monmongo mongoimport -d test -c notes3 < ./tp2/notes3.json
+```
+
+### Q2. Afin de bien appréhender la collection ...
+
+#### Q2.1. Affichez le premier document
+
+```javascript
+db.notes3.aggregate([
+	{
+		$limit: 1
+	}
+])
+```
+
+#### Q2.2. Affichez le nombre de documents
+
+```javascript
+db.notes3.aggregate([
+	{
+		$group:
+		{
+			_id: null,
+			count:
+			{
+				$sum: 1
+			}
+		}
+	}
+])
+```
+
+### Q3. Calculez la moyenne des notes de bdd
+
+```javascript
+db.notes3.aggregate([
+	{ 
+		$unwind: "$notes"
+	},
+	{
+		$match:
+		{
+			"notes.mat": "bdd"
+		}
+	},
+	{
+		$group:
+		{
+			_id: null,
+			moyenneBdd:
+			{
+				$avg: "$notes.valeur"
+			}
+		}
+	}
+])
+```
+
+### Q4. Sachant qu’il y a 7 objets contrôle dans l’array notes et que, quand un étudiant a été absent, l’object contrôle n’y est pas, affichez les noms des étudiants à qui il manque des notes.
+
+```javascript
+db.notes3.aggregate([
+	{
+		$project:
+		{
+			_id: 1,
+			username: 1,
+			arraySize: {$size: "$notes"}
+     	}
+	},
+	{
+		$match:
+		{
+			"arraySize": { $lt: 8 }			
+		}
+	}
+])
+
+db.notes3.aggregate([
+	{
+		$unwind: "$notes",
+	},
+	{
+		$group:
+		{
+			_id: "$_id",
+			nbControles:
+			{
+				$sum: 1
+			}
+		}
+	},
+	{
+		$match:
+		{
+			nbControles: { $lt: 8 }			
+		}
+	}
+])
+```
+
+,
+	{
+		$match:
+		{
+			"arraySize": { $lt: 7 }			
+		}
+	}
+
+
+### Q5. Affichez maintenant les noms des étudiants à qui il manque des notes en BDD
+### Q6. Affichez maintenant le nom de l’étudiant, la matière et le numéro du contrôle manquant
+
 A la fin de ce TP détruisez complètement les instances docker que vous avez créés.
 Vérifiez que les commandes docker ps --all et docker volume ls ne retournent plus rien
