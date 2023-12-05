@@ -257,12 +257,15 @@ db.notes1.aggregate([
 ```javascript
 db.notes1.mapReduce(
 	function (clef, valeur) {
-		emit(this.groupe, this.valeur);
+		emit(null, this.valeur);
 	},
 	function (clef, valeurs) {
 		return valeurs.reduce(
 			(accumulator, currentValue) => {
-				return accumulator += currentValue;
+				if (currentValue > accumulator) {
+					accumulator = currentValue
+				}
+				return accumulator;
 			}
 		)
 	},
@@ -275,16 +278,280 @@ db.notes1.mapReduce(
 )
 ```
 
-Q2. Calculez le nombre de notes dans la collection.
-Q3. Affichez en une fois le min et le max des notes de la collection.
-Q4. Calculez la moyenne des notes dans la collection étudiants
-Q5. Affichez le prénom le plus court dans la collection (le premier en cas d’égalité).
-Exercice 3 : Calcul sur des parties de la collection
+#### Q2. Calculez le nombre de notes dans la collection.
+
+
+```javascript
+db.notes1.aggregate([
+	{
+		$group:
+		{
+			_id: null,
+			count:
+			{
+				$sum: 1
+			}
+		}
+	}
+])
+```
+
+```javascript
+db.notes1.mapReduce(
+	function (clef, valeur) {
+		emit(null, this.valeur);
+	},
+	function (clef, valeurs) {
+		return valeurs.length;
+	},
+	{
+		out:
+		{
+			inline: 1
+		}
+	}
+)
+```
+
+#### Q3. Affichez en une fois le min et le max des notes de la collection.
+
+```javascript
+db.notes1.aggregate([
+	{
+		$group:
+		{
+			_id: null,
+			min:
+			{
+				$min: "$valeur"
+			},
+			max:
+			{
+				$max: "$valeur"
+			}
+		}
+	}
+])
+```
+
+```javascript
+db.notes1.mapReduce(
+	function (clef, valeur) {
+		emit(null, this.valeur);
+	},
+	function (clef, valeurs) {
+		return { min: Math.min(...valeurs), max: Math.max(...valeurs) }
+	},
+	{
+		out:
+		{
+			inline: 1
+		}
+	}
+)
+```
+
+#### Q4. Calculez la moyenne des notes dans la collection étudiants
+
+```javascript
+db.notes1.aggregate([
+	{
+		$group:
+		{
+			_id: null,
+			moyNotes:
+			{
+				$avg: "$valeur"
+			}
+		}
+	}
+])
+```
+
+```javascript
+db.notes1.mapReduce(
+	function (clef, valeur) {
+		emit(null, this.valeur);
+	},
+	function (clef, valeurs) {
+		const average = valeurs.reduce( ( p, c ) => p + c, 0 ) / valeurs.length;
+		return average;
+	},
+	{
+		out:
+		{
+			inline: 1
+		}
+	}
+)
+```
+
+#### Q5. Affichez le prénom le plus court dans la collection (le premier en cas d’égalité).
+
+```javascript
+db.notes1.aggregate([
+	{
+		$project:
+		{
+			nom: 1,
+			prenomSize:
+			{
+				$strLenCP: "$nom"
+			}
+		}
+	},
+	{
+		$sort:
+		{
+			nom: 1,
+			prenomSize: 1
+		}
+	},
+	{
+		$limit: 1
+	}
+])
+```
+
+```javascript
+db.notes1.mapReduce(
+	function (clef, nom) {
+		emit(null, this.nom);
+	},
+	function (clef, noms) {
+		return noms.reduce(
+			(accumulator, currentValue) => {
+				if (currentValue < accumulator) {
+					accumulator = currentValue;
+				}
+				return accumulator;
+			}
+		)
+	},
+	{
+		out:
+		{
+			inline: 1
+		}
+	}
+)
+```
+
+### Exercice 3 : Calcul sur des parties de la collection
+
 Quand le calcul s’applique à des parties de la collection (agrégat avec group by), il est nécessaire d’avoir une clé par
 partie.
-Q1. Calculer le nombre de notes par étudiant
-Q2. Fournir la distribution des notes de la collection, triée par valeurs.
-Q3. Calculer la moyenne des notes par étudiant
+
+#### Q1. Calculer le nombre de notes par étudiant
+
+```javascript
+db.notes1.aggregate([
+	{
+		$group:
+		{
+			_id: "$nom",
+			count:
+			{
+				$sum: 1
+			}
+		}
+	}
+])
+```
+
+```javascript
+db.notes1.mapReduce(
+	function (clef, nom) {
+		emit(this.nom, null);
+	},
+	function (clef, noms) {
+		return noms.length;
+	},
+	{
+		out:
+		{
+			inline: 1
+		}
+	}
+)
+```
+
+#### Q2. Fournir la distribution des notes de la collection, triée par valeurs.
+
+```javascript
+db.notes1.aggregate([
+	{
+		$group:
+		{
+			_id: "$valeur",
+			count:
+			{
+				$sum: 1
+			}
+		}
+	},
+	{
+		$sort:
+		{
+			_id: 1
+		}
+	}
+])
+```
+
+```javascript
+db.notes1.mapReduce(
+	function (clef, valeur) {
+		emit(this.valeur, null);
+	},
+	function (clef, valeurs) {
+		return valeurs.length;
+	},
+	{
+		out:
+		{
+			inline: 1
+		}
+	}
+);
+```
+
+#### Q3. Calculer la moyenne des notes par étudiant
+
+```javascript
+db.notes1.aggregate([
+	{
+		$group:
+		{
+			_id: "$nom",
+			moyenneEtu:
+			{
+				$avg: "$valeur"
+			}
+		}
+	}
+])
+```
+
+```javascript
+db.notes1.mapReduce(
+	function (clef, valeur) {
+		emit(this.nom, this.valeur);
+	},
+	function (clef, valeurs) {
+		const average = valeurs.reduce( ( p, c ) => p + c, 0 ) / valeurs.length;
+		return average;
+	},
+	{
+		out:
+		{
+			inline: 1
+		}
+	}
+);
+```
+
+
 A la fin de ce TP détruisez complètement les instances docker que vous avez créés.
+
 Vérifiez que les commandes docker ps --all et docker volume ls ne retournent plus rien
-3
