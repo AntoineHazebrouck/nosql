@@ -1,0 +1,137 @@
+# MONGO avec 3 shards de 1 noeud  et un shard de 3 configs
+# 
+# Auteur : P Mathieu
+# Date   : 20/08/2021
+#
+# Pour le lancer
+# docker-compose up -d
+
+# Pour s'y connecter
+# docker exec -it node1  mongosh --port 27018
+# docker exec -it node2  mongosh --port 27018
+# docker exec -it config1 mongosh --port 27019
+# docker exec -it mongos mongosh
+
+# Pour arrêter
+# docker-compose down -v
+
+
+# ATTENTION, par defaut
+# mongod , mongos servent sur 27017
+# un shardsrv sert sur le port 27018
+# un configSvr sert sur le port 27019
+
+#---------------------------------------
+
+services:
+
+  # Les serveurs de metadata (1 shard)
+  config1:
+    image: mongo:latest
+    container_name: config1
+    command: mongod --configsvr --replSet configShard
+    ports:
+      - "27031:27019"
+    networks:
+      - mongo-cluster
+      
+  config2:
+    image: mongo:latest
+    container_name: config2
+    command: mongod --configsvr --replSet configShard
+    ports:
+      - "27032:27019"
+    networks:
+      - mongo-cluster
+      
+
+
+
+  # Les replica sets (2 shards)
+  node1:
+    image: mongo:latest
+    container_name: node1
+    command: mongod --shardsvr --replSet shard1
+    ports:
+      - "27020:27018"
+    networks:
+      - mongo-cluster
+
+  node2:
+    image: mongo:latest
+    container_name: node2
+    command: mongod --shardsvr --replSet shard1
+    ports:
+      - "27021:27018"
+    networks:
+      - mongo-cluster
+
+  node3:
+    image: mongo:latest
+    container_name: node3
+    command: mongod --shardsvr --replSet shard2
+    ports:
+      - "27022:27018"
+    networks:
+      - mongo-cluster
+
+
+  node4:
+    image: mongo:latest
+    container_name: node4
+    command: mongod --shardsvr --replSet shard2
+    ports:
+      - "27023:27018"
+    networks:
+      - mongo-cluster
+
+
+
+  # Le router de requetes mongos
+  mongos:
+    image: mongo:latest
+    container_name: mongos
+    command: mongos --port 27017 --configdb configShard/config1:27019,config2:27019 --bind_ip_all
+    ports:
+      - "27017:27017"
+    networks:
+      - mongo-cluster
+    depends_on:
+      - config1
+      - node1
+      - node2
+      - node3
+      - node4	
+      
+networks:
+  mongo-cluster:
+    driver: bridge
+
+
+
+
+
+
+# Pour voir la manière dont il a distribué les données
+# db.printShardingStatus()
+
+
+# Pour voir le nombre de données dans chaque chunk
+# db.getSiblingDB("mydb").getCollection("mycollection").find({}).count()
+
+
+# Replicat set : par défaut 3  , utiliser rs.reconfig pour changer cette valeur
+# rs.status()
+
+# Pour tout virer
+# docker compose down --volumes
+
+
+# voir des exemples ici
+# https://github.com/minhhungit/mongodb-cluster-docker-compose
+# avec TRES BEAU DESSIN !!
+# ou
+# https://dzone.com/articles/composing-a-sharded-mongodb-on-docker
+# Ou
+# https://github.com/chefsplate/mongo-shard-docker-compose
+

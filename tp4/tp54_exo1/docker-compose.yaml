@@ -1,0 +1,58 @@
+# MONGO avec un shard de 3 noeuds
+# 
+# Auteur : P Mathieu
+# Date   : 20/08/2021
+#
+# Pour le lancer
+# docker-compose up -d
+
+# Pour s'y connecter
+# docker exec -it node1  mongosh --port 27018
+# docker exec -it node2  mongosh --port 27018
+
+# Pour arrêter
+# docker-compose down -v
+
+
+# ATTENTION, par defaut
+# mongod , mongos servent sur 27017
+# un shardsrv sert sur le port 27018
+# un configSvr sert sur le port 27019
+
+#---------------------------------------
+
+services:
+
+  # Un replica set (shard)
+  node1:
+    image: mongo:latest
+    container_name: node1
+    command: mongod --shardsvr --replSet shard1
+    ports:
+      - "27019:27018"
+    networks:
+      - mongo-cluster
+
+  node2:
+    image: mongo:latest
+    container_name: node2
+    command: mongod --shardsvr --replSet shard1
+    ports:
+      - "27020:27018"
+    networks:
+      - mongo-cluster
+
+  node3:
+    image: mongo:latest
+    container_name: node3
+    command: mongod --shardsvr --replSet shard1
+    ports:
+      - "27021:27018"
+    networks:
+      - mongo-cluster
+
+      
+networks:
+  mongo-cluster:
+    driver: bridge
+
