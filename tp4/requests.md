@@ -330,3 +330,34 @@ db.users.getShardDistribution()
 
 Toute requête sur un Primary ne concerne que les données du shard correspondant. Toute requête sur le router
 concerne tous les shards.
+
+## Exercice 4 : Ecrire un programme
+
+#### Q1. Ecrivez un programme java qui se connecte à mongos et qui affiche simplement le nombre de documents dans la collection (voir transp_cours51.pdf, slide 30). Vous aurez besoin de 4 dépendances : bson , mongodb-driver-core, mongodb-driver-sync. Une archive est à disposition sur Moodle. Un warning SLF4J peut s’afficher au lancement, ce n’est pas important.
+
+```java
+	public static void main(String[] args) {
+		String connectionString = "mongodb://localhost:27017";
+		MongoClient mongoClient = MongoClients.create(connectionString);
+		MongoDatabase database = mongoClient.getDatabase("test");
+		MongoCollection<Document> collection = database.getCollection("users");
+		long nb = collection.countDocuments();
+		System.out.println("Nombre de documents: " + nb);
+		FindIterable<Document> documents = collection.find().limit(10);
+		for (Document d : documents)
+			System.out.println(d.toJson());
+		mongoClient.close();
+
+		System.out.println("Hello World!");
+	}
+```
+
+## Exercice 5 : Tolérance aux pannes
+
+Dans cet exercice, on considère que la boucle précédente continue de tourner. Que se passe t-il si en cours d’exécution d’un programme des pannes se produisent.
+
+#### Q1. Tuer un noeud secondaire du shard1 On constate que l’autre noeud replica prend le relai : le programme fonctionne toujours :-)
+
+```shell
+docker kill node1
+```
