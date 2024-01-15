@@ -1,0 +1,109 @@
+# REDIS avec 2 replica
+# 
+# Auteur : P Mathieu
+# Date   : 20/08/2021
+#
+# Pour le lancer
+# docker-compose up -d --build
+
+# Pour s'y connecter
+# docker exec -it maitre redis-cli
+# docker exec -it replica1 redis-cli
+
+# Pour arrêter
+# docker-compose down -v
+
+#---------------------------------------
+
+
+version: '3.8'
+
+networks:
+    redis-cluster:
+      driver: bridge
+
+volumes:
+  mesdatamaitre:
+     driver: local
+
+#---------------le master -----------
+     
+services:
+  # le maitre (lecture/ecriture)
+  redis-maitre:
+    image: redis:latest
+    container_name: maitre
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    volumes:
+      - mesdatamaitre:/data
+    command: redis-server --save 20 1
+    ports:
+      - "6379:6379"
+    networks:
+      - redis-cluster
+
+
+#---------------les 2 replicas -----------
+
+  # les replicas (lecture seule)
+  redis-replica1:
+    image: redis:latest
+    container_name: replica1
+    ports:
+      - "6380:6379"
+    command: redis-server --replicaof maitre 6379
+    depends_on:
+      - redis-maitre
+    networks:
+      - redis-cluster
+
+  # second replica
+  redis-replica2:
+    image: redis:latest
+    container_name: replica2
+    ports:
+      - "6381:6379"
+    command: redis-server --replicaof maitre 6379
+    depends_on:
+      - redis-maitre
+    networks:
+      - redis-cluster
+
+#----------- les 3 sentinel -------------
+
+  sentinel1:
+    build:
+      context: .
+      dockerfile: Dockerfile-sentinel
+    container_name: sentinel1
+    depends_on:
+      - redis-maitre
+      - redis-replica1
+      - redis-replica2
+    networks:
+      - redis-cluster
+
+  sentinel2:
+    build:
+      context: .
+      dockerfile: Dockerfile-sentinel
+    container_name: sentinel2
+    depends_on:
+      - redis-maitre
+      - redis-replica1
+      - redis-replica2
+    networks:
+      - redis-cluster
+
+  sentinel3:
+    build:
+      context: .
+      dockerfile: Dockerfile-sentinel
+    container_name: sentinel3
+    depends_on:
+      - redis-maitre
+      - redis-replica1
+      - redis-replica2
+    networks:
+      - redis-cluster

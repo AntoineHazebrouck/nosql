@@ -149,59 +149,165 @@ La réplication permet d’assurer la haute disponibilité. Redis fonctionne en 
 Idéalement chaque serveur est sur une machine différente. Avec Docker il faut créer plusieurs services, nous utiliserons cette fois une stack docker-compose.
 
 #### 1. Téléchargez le fichier tp56_exo3.zip qui contient un répertoire avec un docker-compose permettant de créer un maitre et 2 réplicas
-2. Regardez attentivement chacun de ces fichiers
-3. Lancez la configuration avec docker compose up
-4. Assurez vous d’avoir 2 consoles côte à côte
-5. Dans la première, lancez un client Redis sur maitre; dans la seconde un client Redis sur replica1
+
+#### 2. Regardez attentivement chacun de ces fichiers
+
+#### 3. Lancez la configuration avec docker compose up
+
+```powershell
+cd .\tp56_exo3\
+docker compose up
+```
+
+#### 4. Assurez vous d’avoir 2 consoles côte à côte
+
+#### 5. Dans la première, lancez un client Redis sur maitre; dans la seconde un client Redis sur replica1
+
+```shell
+docker exec -it maitre redis-cli
+```
+
+```shell
+docker exec -it replica1 redis-cli
+```
+
 A ce stade vous avez donc 2 machines, à gauche un client sur maitre, à droite un client sur replica1
-6. la commande ROLE permet de savoir à quel type de serveur vous êtes connecté. Testez dans les deux consoles.
-7. la commande GET CONFIG slaveof permet d’avoir les infos sur le maitre surveillé
-8. Sur le maître, affectez une clé
-9. Sur le réplica (slave) relisez votre clé
-10. Le réplica ne fonctionne qu’en lecture. Tentez d’affecter une clé
-11. Redis est très souple ! comme pour ls moniteurs, vous pouvez arrêter et redémarrer un réplica n’importe quand; au
-lancement il se resynchronise immédiatement. Arrêtez le réplica (docker stop replica1), affectez quelques
-clés sur le Maitre puis relancez le réplica. A priori toutes les clés devraient réapparaitre.
-12. Une fois l’exercice terminé, arrêtez la stack docker avec docker compose down -v
-Exercice 4 : Les Sentinelles
-Afin d’assurer une très haute disponiblité, il est impératif de pouvoir faire face au plantage du serveur Maitre. Le
-rôle des sentinelles est de surveiller le Maitre et d’en élire un nouveau en cas de problème. Afin d’avoir le quorum au
-système de vote, il faut un nombre impair de sentinelles, dont au minimum 3 sentinelles.
-La configuration minimum devient donc la suivante : 1 maitre, 2 replicas (dont l’un sera élu en cas de plantage du maitre)
-2
-et 3 sentinelles. Par ailleurs, les sentinelles necessitent impérativement un fichier de configuration.
-La configuration étant assez complexe, nous mettons en place un docker-compose pour cela. Il s’appuie sur un
-Dockerfile pour configurer les sentinelles.
-1. Récupérer le répertoire tp56_exo4.zip qui contient les fichiers nécessaires
-2. Regardez attentivement chacun de ces fichiers
-3. Lancez la configuration avec docker-compose up
+
+#### 6. la commande ROLE permet de savoir à quel type de serveur vous êtes connecté. Testez dans les deux consoles.
+
+```shell
+ROLE
+```
+
+#### 7. la commande CONFIG GET slaveof permet d’avoir les infos sur le maitre surveillé
+
+#### 8. Sur le maître, affectez une clé
+
+```shell
+SET cpt 10
+```
+
+#### 9. Sur le réplica (slave) relisez votre clé
+
+```shell
+GET cpt
+```
+
+#### 10. Le réplica ne fonctionne qu’en lecture. Tentez d’affecter une clé
+
+```shell
+SET cpt 15
+```
+
+#### 11. Redis est très souple ! comme pour les moniteurs, vous pouvez arrêter et redémarrer un réplica n’importe quand; au lancement il se resynchronise immédiatement. Arrêtez le réplica (docker stop replica1), affectez quelques clés sur le Maitre puis relancez le réplica. A priori toutes les clés devraient réapparaitre.
+
+#### 12. Une fois l’exercice terminé, arrêtez la stack docker avec docker compose down -v
+
+## Exercice 4 : Les Sentinelles
+
+Afin d’assurer une très haute disponiblité, il est impératif de pouvoir faire face au plantage du serveur Maitre. Le rôle des sentinelles est de surveiller le Maitre et d’en élire un nouveau en cas de problème. Afin d’avoir le quorum au système de vote, il faut un nombre impair de sentinelles, dont au minimum 3 sentinelles. 
+La configuration minimum devient donc la suivante : 1 maitre, 2 replicas (dont l’un sera élu en cas de plantage du maitre) et 3 sentinelles. Par ailleurs, les sentinelles necessitent impérativement un fichier de configuration.
+La configuration étant assez complexe, nous mettons en place un docker-compose pour cela. Il s’appuie sur un Dockerfile pour configurer les sentinelles.
+
+
+#### 1. Récupérer le répertoire tp56_exo4.zip qui contient les fichiers nécessaires
+
+#### 2. Regardez attentivement chacun de ces fichiers
+
+#### 3. Lancez la configuration avec docker-compose up
+
+```powershell
+cd .\tp56_exo4\
+docker compose up
+```
+
 A ce stade vous avez donc 6 machines
-4. Connectez vous sur maitre et affectez une clé maitre="ok".
-5. Connectez vous sur replica1
+
+#### 4. Connectez vous sur maitre et affectez une clé maitre="ok".
+
+```shell
+docker exec -it maitre redis-cli
+
+SET maitre ok
+```
+
+#### 5. Connectez vous sur replica1
+
+```shell
+docker exec -it replica1 redis-cli
+```
+
 (a) vérifiez qu’il est bien en mode slave
+
+```shell
+ROLE
+```
+
 (b) vérifiez aussi que la clé pécédente a bien été répliquée
+
+```shell
+GET maitre
+```
+
 (c) Vous pouvez tenter d’affecter une clé, ça n’est évidemment pas possible.
-6. Arrêtez maintenant le maitre
-7. Attendre 10 secondes, puis reconnectez vous sur replica1
+
+```shell
+SET maitre okok
+```
+
+#### 6. Arrêtez maintenant le maitre
+
+```shell
+docker stop maitre
+```
+
+#### 7. Attendre 10 secondes, puis reconnectez vous sur replica1 (ou replica2)
+
+```shell
+docker exec -it replica1 redis-cli
+```
+
 (a) vérifiez qu’il est maintenant passé en mode master
+
+```shell
+ROLE
+```
+
 (b) vérifiez que la clé pécédente a bien été répliquée
+
+```shell
+GET maitre
+```
+
 (c) affectez une nouvelle clé replica1="ok". cette fois c’est possible
-8. On peut pour finir vérifier que réplica2 (pour qui rien n’a changé) connait bien toutes les clés, qu’elles aient été
-créées sur maitre comme sur replica1
-9. Une fois l’exercice terminé, arrêtez la stack docker avec docker-compose down -v
-Exercice 5 : Externaliser la gestion des sessions
-Les sites web ont souvent besoin de gérer des sessions aussi bien pour l’authentification que pour le stockage de
-données propres à chaque utilisateur. Lors d’une montée en charge importante (> 30.000hits/min, il devient alors nécessaire de dupliquer le serveurs web et distribuer les requêtes HTTP sur ce cluster de serveurs. Dans ce cas, pour
-éviter de perdre les données de l’utilisateur quand sa requête est envoyée sur une autre machine, il est nécessaire d’externaliser les données de la session. Ce travail est fait quasi automatiquement par le starter spring-session-core.
-Ce dernier peut utiliser n’importe quelle base de données pour stocker les sessions, et Redis est un candidat idéal pour
-cela.
-Pour illustrer cela nous allons créer une application springboot la plus simple possible (ni security, ni jsp, ni
-jpa) juste avec spring-session-core et une de ses implémentations pour l’externalisation des sessions.
+
+```shell
+SET replica1 ok
+```
+
+#### 8. On peut pour finir vérifier que réplica2 (pour qui rien n’a changé) connait bien toutes les clés, qu’elles aient été créées sur maitre comme sur replica1
+
+```shell
+GET replica1
+```
+
+#### 9. Une fois l’exercice terminé, arrêtez la stack docker avec docker-compose down -v
+
+## Exercice 5 : Externaliser la gestion des sessions
+
+Les sites web ont souvent besoin de gérer des sessions aussi bien pour l’authentification que pour le stockage de données propres à chaque utilisateur. Lors d’une montée en charge importante (> 30.000hits/min, il devient alors nécessaire de dupliquer le serveurs web et distribuer les requêtes HTTP sur ce cluster de serveurs. 
+Dans ce cas, pour éviter de perdre les données de l’utilisateur quand sa requête est envoyée sur une autre machine, il est nécessaire d’externaliser les données de la session. Ce travail est fait quasi automatiquement par le starter spring-session-core.
+Ce dernier peut utiliser n’importe quelle base de données pour stocker les sessions, et Redis est un candidat idéal pour cela.
+Pour illustrer cela nous allons créer une application springboot la plus simple possible (ni security, ni jsp, ni jpa) juste avec spring-session-core et une de ses implémentations pour l’externalisation des sessions.
 spring init --build=maven -d=web,devtools,session,jdbc,postgresql,redis -g=fr.but3 tp56
-Q1. Version Postgres
-1. Cette version necessite les dépendances spring-session-jdbc et le driver postgresql.
+
+### Q1. Version Postgres
+
+#### 1. Cette version necessite les dépendances spring-session-jdbc et le driver postgresql.
+
 Dans le pom généré, activez la dépendance spring-session-jdbc et mettez en commentaire la dépendance
 spring-session-data-redis
+
 2. Dans le application.properties on indique les paramètres habituels pour créer un bean dataSource
 spring.datasource.url=jdbc:postgresql://psqlserv/but3
 spring.datasource.username=duchemin

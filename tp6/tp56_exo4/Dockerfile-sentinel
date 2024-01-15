@@ -1,0 +1,8 @@
+# Use the official Redis Sentinel image as the base image
+FROM redis:latest
+
+# Set the configuration file for Sentinel
+COPY sentinel.conf /etc/redis/sentinel.conf
+
+# Start Redis Sentinel with the configuration file
+CMD ["redis-sentinel", "/etc/redis/sentinel.conf"]
